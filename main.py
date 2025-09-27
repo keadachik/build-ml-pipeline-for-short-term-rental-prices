@@ -9,6 +9,7 @@ from omegaconf import DictConfig
 
 _steps = [
     "download",
+    "eda",
     "basic_cleaning",
     "data_check",
     "data_split",
@@ -21,7 +22,7 @@ _steps = [
 
 
 # This automatically reads in the configuration
-@hydra.main(version_base=None, config_name='config')  # Adding version_base for Python 3.13 compatibility
+@hydra.main(version_base=None, config_path=".", config_name='config')  # Adding version_base for Python 3.13 compatibility
 def go(config: DictConfig):
 
     # Setup the wandb experiment. All runs will be grouped under this name
@@ -40,7 +41,6 @@ def go(config: DictConfig):
             _ = mlflow.run(
                 f"{config['main']['components_repository']}/get_data",
                 "main",
-                version='main',
                 env_manager="conda",
                 parameters={
                     "sample": config["etl"]["sample"],
@@ -50,23 +50,63 @@ def go(config: DictConfig):
                 },
             )
 
+        if "eda" in active_steps:
+            _ = mlflow.run(
+                f"{config['main']['components_repository']}/eda",
+                "main",
+                env_manager="conda"
+            )
+
         if "basic_cleaning" in active_steps:
             ##################
             # Implement here #
             ##################
-            pass
+            _ = mlflow.run(
+                f"src/basic_cleaning",
+                "main",
+                env_manager="conda",
+                parameters={
+                    "input_artifact": "sample.csv:latest",
+                    "output_artifact": "clean_sample.csv",
+                    "output_type": "clean_sample",
+                    "output_description": "Data with outliers and null values removed",
+                    "min_price": config['etl']['min_price'],
+                    "max_price": config['etl']['max_price']
+                }
+            )
 
         if "data_check" in active_steps:
             ##################
             # Implement here #
             ##################
-            pass
+            _ = mlflow.run(
+                f"src/data_check",
+                "main",
+                env_manager="conda",
+                parameters={
+                    "csv": "clean_sample.csv:latest",
+                    "ref": "clean_sample.csv:reference",
+                    "kl_threshold": config['data_check']['kl_threshold'],
+                    "min_price": config['etl']['min_price'],
+                    "max_price": config['etl']['max_price']
+                }
+            )
 
         if "data_split" in active_steps:
             ##################
             # Implement here #
             ##################
-            pass
+            _ = mlflow.run(
+                f"{config['main']['components_repository']}/train_val_test_split",
+                "main",
+                env_manager="conda",
+                parameters={
+                    "input": "clean_sample.csv:latest",
+                    "test_size": config['modeling']['test_size'],
+                    "random_seed": config['modeling']['random_seed'],
+                    "stratify_by": config['modeling']['stratify_by']
+                }
+            )
 
         if "train_random_forest" in active_steps:
 
@@ -82,7 +122,20 @@ def go(config: DictConfig):
             # Implement here #
             ##################
 
-            pass
+            _ = mlflow.run(
+                f"src/train_random_forest",
+                "main",
+                env_manager="conda",
+                parameters={
+                    "trainval_artifact": "trainval_data.csv:latest",
+                    "val_size": config['modeling']['val_size'],
+                    "random_seed": config['modeling']['random_seed'],
+                    "stratify_by": config['modeling']['stratify_by'],
+                    "rf_config": rf_config,
+                    "max_tfidf_features": config['modeling']['max_tfidf_features'],
+                    "output_artifact": "random_forest_export"
+                }
+            )
 
         if "test_regression_model" in active_steps:
 
