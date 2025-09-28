@@ -8,7 +8,7 @@ In this project you will build such a pipeline.
 
 ## Project Links
 - **GitHub Repository**: https://github.com/keadachik/build-ml-pipeline-for-short-term-rental-prices
-- **Weights & Biases Project**: https://wandb.ai/mkeadachik-dynatrace/nyc_airbnb
+- **Weights & Biases Project**: https://wandb.ai/[新しい個人アカウント名]/nyc_airbnb_personal
 
 ## Table of contents
 
