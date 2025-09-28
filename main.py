@@ -52,9 +52,15 @@ def go(config: DictConfig):
 
         if "eda" in active_steps:
             _ = mlflow.run(
-                f"{config['main']['components_repository']}/eda",
+                f"src/eda",
                 "main",
-                env_manager="conda"
+                env_manager="conda",
+                parameters={
+                    "input_artifact": "sample.csv:latest",
+                    "output_artifact": "sample_cleaned.csv",
+                    "min_price": config['etl']['min_price'],
+                    "max_price": config['etl']['max_price']
+                }
             )
 
         if "basic_cleaning" in active_steps:
